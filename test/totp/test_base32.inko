@@ -1,0 +1,72 @@
+import std.test.Tests
+
+import totp.base32.(Error, decode)
+
+fn pub tests(t: mut Tests) {
+  t.test("RFC 4648 test vector - ''") fn (t) {
+    let input = ''
+    let expected = ''.to_byte_array
+
+    match decode(input) {
+      case Ok(actual) -> t.equal(actual, expected)
+      case Error(_) -> t.true(false)
+    }
+  }
+
+  t.test("RFC 4648 test vector - 'MZXW6==='") fn (t) {
+    let input = 'MZXW6==='
+    let expected = 'foo'.to_byte_array
+
+    match decode(input) {
+      case Ok(actual) -> t.equal(actual, expected)
+      case Error(_) -> t.true(false)
+    }
+  }
+
+  t.test("RFC 4648 test vector - 'MZXW6YTB'") fn (t) {
+    let input = 'MZXW6YTB'
+    let expected = 'fooba'.to_byte_array
+
+    match decode(input) {
+      case Ok(actual) -> t.equal(actual, expected)
+      case Error(_) -> t.true(false)
+    }
+  }
+
+  t.test("RFC 4648 test vector - 'MZXW6YTBOI======'") fn (t) {
+    let input = 'MZXW6YTBOI======'
+    let expected = 'foobar'.to_byte_array
+
+    match decode(input) {
+      case Ok(actual) -> t.equal(actual, expected)
+      case Error(error) -> t.true(false)
+    }
+  }
+
+  t.test('invalid padding - last') fn (t) {
+    let input = 'MZXW6YTB='
+
+    match decode(input) {
+      case Ok(_) -> t.true(false)
+      case Error(error) -> t.equal(error.to_string, 'invalid padding')
+    }
+  }
+
+    t.test('invalid padding - middle') fn (t) {
+    let input = 'MZXW=6YTB'
+
+    match decode(input) {
+      case Ok(_) -> t.true(false)
+      case Error(error) -> t.equal(error.to_string, 'invalid padding')
+    }
+  }
+
+  t.test('invalid character') fn (t) {
+    let input = 'MZXW????'
+
+    match decode(input) {
+      case Ok(actual) -> t.true(false)
+      case Error(error) -> t.equal(error.to_string, 'invalid character: 0x3f')
+    }
+  }
+}

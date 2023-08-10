@@ -1,0 +1,59 @@
+import std.env
+import std.stdio.(STDERR, STDOUT)
+import std.sys
+
+import totp.(Error, Totp)
+
+class async Main {
+  fn async main {
+    match run {
+      case Ok(_) -> {}
+      case Error(error) -> {
+        exit(error.to_string)
+      }
+    }
+  }
+}
+
+fn run -> Result[Nil, Error] {
+  match env.arguments.opt(0) {
+    case Some('generate') or Some('g') -> {
+      let secret = env.arguments.opt(1).unwrap_or_else fn () {
+        exit('secret is required')
+      }
+      let totp = try Totp.with_secret(secret)
+
+      STDOUT.new.print("{totp.generate}")
+    }
+    case Some('validate') or Some('v') -> {
+      let secret = env.arguments.opt(1).unwrap_or_else fn () {
+        exit('secret is required')
+      }
+      let token = env.arguments.opt(2).unwrap_or_else fn () {
+        exit('token is required')
+      }
+      let totp = try Totp.with_secret(secret)
+
+      if totp.validate(token) {
+        STDOUT.new.print('valid')
+      } else {
+        STDERR.new.print('invalid')
+        sys.exit(1)
+      }
+    }
+    case Some('help') or Some('h') or Some('--help') or Some('-h') or None -> {
+      STDOUT.new.print('usage: totp generate <secret>')
+      STDOUT.new.print('usage: totp validate <secret> <token>')
+    }
+    case Some(command) -> {
+      exit("'{command}' is not a totp command. See `totp help`.")
+    }
+  }
+
+  Result.Ok(nil)
+}
+
+fn exit(message: String) -> Never {
+  STDERR.new.print("error: {message}")
+  sys.exit(1)
+}

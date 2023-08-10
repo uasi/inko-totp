@@ -1,0 +1,130 @@
+import std.fmt.(Format, Formatter)
+import std.int.(Format as IntFormat)
+import std.iter.Peekable
+import std.stdio.STDOUT
+import std.string.ToString
+
+let ZERO = 0x30
+let EQUAL = 0x3d
+let LOWER_A = 0x61
+let LOWER_Z = 0x7a
+let UPPER_LOWER_DIFF = 0x20
+
+# https://www.rfc-editor.org/rfc/rfc4648#section-6
+let BASE32_ALPHAFET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+let BASE32_ALPHAFET_TO_BYTE =[-1, -1, 26, 27, 28, 29, 30, 31, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+
+fn pub decode(string: String) -> Result[ByteArray, Error] {
+  let buffer = ByteArray.new
+
+  let output = ByteArray.filled(with: 0, times: (string.size * 5) / 8)
+  let mut output_size = output.size
+  output.clear
+
+  let chunks = string.bytes.chunks(8)
+
+  loop {
+    let chunk = match chunks.next {
+      case Some(chunk) -> chunk
+      case None -> break
+    }
+
+    let characters = chunk.iter.peekable
+
+    loop {
+      let character = match characters.peek {
+        case Some(EQUAL) -> {
+          let padding_size = try expect_padding(characters)
+
+          if (buffer.size + padding_size) % 8 != 0 {
+            throw Error.InvalidPadding
+          }
+
+          output_size = ((string.size - padding_size) * 5) / 8
+
+          if output_size < 0 or chunks.next.some? {
+            throw Error.InvalidPadding
+          }
+
+          break
+        }
+        case Some(character) -> {
+          characters.next
+          character
+        }
+        case None -> break
+      }
+
+      let index = upcase(character) - ZERO
+
+      let byte = match BASE32_ALPHAFET_TO_BYTE.opt(index) {
+        case Some(-1) or None -> throw Error.InvalidCharacter(character)
+        case Some(byte) -> byte
+      }
+
+      buffer.push(byte)
+    }
+
+    buffer.resize(size: 8, value: 0)
+
+    output.push((buffer.get(0) << 3) | (buffer.get(1) >> 2))
+    output.push((buffer.get(1) << 6) | (buffer.get(2) << 1) | (buffer.get(3) >> 4))
+    output.push((buffer.get(3) << 4) | (buffer.get(4) >> 1))
+    output.push((buffer.get(4) << 7) | (buffer.get(5) << 2) | (buffer.get(6) >> 3))
+    output.push((buffer.get(6) << 5) | buffer.get(7))
+
+    buffer.clear
+  }
+
+  output.resize(output_size, value: 0)
+
+  Result.Ok(output)
+}
+
+fn expect_padding(characters: mut Peekable[Int]) -> Result[Int, Error] {
+  let mut size = 0
+
+  loop {
+    let character = match characters.next {
+      case Some(EQUAL) -> size = size + 1
+      case Some(_) -> throw Error.InvalidPadding
+      case _ -> break
+    }
+  }
+
+  match size {
+    case 0 or 1 or 3 or 4 or 6 -> Result.Ok(size)
+    case _ -> throw Error.InvalidPadding
+  }
+}
+
+fn upcase(character: Int) -> Int {
+  if LOWER_A.to(LOWER_Z).contains?(character) {
+    return character - UPPER_LOWER_DIFF
+  }
+
+  character
+}
+
+class pub enum Error {
+  case InvalidCharacter(Int)
+  case InvalidPadding
+}
+
+impl Format for Error {
+  fn pub fmt(formatter: mut Formatter) {
+    match self {
+      case InvalidCharacter(character) -> formatter.tuple('InvalidCharacter').field(character).finish
+      case InvalidPadding -> formatter.tuple('InvalidPadding').finish
+    }
+  }
+}
+
+impl ToString for Error {
+  fn pub to_string -> String {
+    match self {
+      case InvalidCharacter(character) -> "invalid character: 0x{character.format(IntFormat.Hex)}"
+      case InvalidPadding -> 'invalid padding'
+    }
+  }
+}

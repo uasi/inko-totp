@@ -1,0 +1,81 @@
+import std.time.DateTime
+import std.test.Tests
+
+import totp.(Time, Totp)
+
+# https://www.rfc-editor.org/rfc/rfc4226#page-27
+let TOKEN_0 = '755224'
+let TOKEN_3 = '969429'
+let TOKEN_4 = '338314'
+let TOKEN_5 = '254676'
+let TOKEN_6 = '287922'
+let TOKEN_7 = '162583'
+let TOKEN_9 = '520489'
+
+fn pub tests(t: mut Tests) {
+  let secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
+
+  t.test(('generate - count=0')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(0 * totp.interval_secs, utc_offset: 0))
+
+    t.equal(totp.generate, TOKEN_0)
+  }
+
+  t.test(('generate - count=5')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(5 * totp.interval_secs, utc_offset: 0))
+
+    t.equal(totp.generate, TOKEN_5)
+  }
+
+  t.test(('generate - count=9')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(9 * totp.interval_secs, utc_offset: 0))
+
+    t.equal(totp.generate, TOKEN_9)
+  }
+
+  t.test(('validate - count=5, skew=-2')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(5 * totp.interval_secs, utc_offset: 0))
+
+    t.false(totp.validate(TOKEN_3))
+  }
+
+  t.test(('validate - count=5, skew=-1')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(5 * totp.interval_secs, utc_offset: 0))
+
+    t.true(totp.validate(TOKEN_4))
+  }
+
+  t.test(('validate - count=5, skew=0')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(5 * totp.interval_secs, utc_offset: 0))
+
+    t.true(totp.validate(TOKEN_5))
+  }
+
+  t.test(('validate - count=5, skew=+1')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(5 * totp.interval_secs, utc_offset: 0))
+
+    t.true(totp.validate(TOKEN_6))
+  }
+
+  t.test(('validate - count=5, skew=+2')) fn (t) {
+    let totp = Totp.with_secret(secret).unwrap
+
+    totp.time = Time.At(DateTime.from_timestamp(5 * totp.interval_secs, utc_offset: 0))
+
+    t.false(totp.validate(TOKEN_7))
+  }
+}

@@ -1,0 +1,17 @@
+import std.env
+import std.test.(Filter, Tests)
+
+import totp.test_base32
+import totp.test_totp
+
+class async Main {
+  fn async main {
+    let tests = Tests.new
+
+    test_base32.tests(tests)
+    test_totp.tests(tests)
+
+    tests.filter = Filter.from_string(env.arguments.opt(0).unwrap_or(''))
+    tests.run
+  }
+}
