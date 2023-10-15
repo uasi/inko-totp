@@ -3,8 +3,9 @@ import std.fmt.(Format, Formatter)
 import std.string.ToString
 import std.time.(DateTime, Duration)
 
+import hmac.Hmac
+
 import totp.base32
-import totp.hmac.Hmac
 
 let pub INTERVAL_SECS = 30
 let pub TOKEN_SIZE = 6
