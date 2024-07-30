@@ -1,8 +1,8 @@
-import std.fmt.(Format, Formatter)
-import std.int.(Format as IntFormat)
-import std.iter.Peekable
-import std.stdio.STDOUT
-import std.string.ToString
+import std.fmt (Format, Formatter)
+import std.int (Format as IntFormat)
+import std.iter (Peekable)
+import std.stdio (STDOUT)
+import std.string (ToString)
 
 let ZERO = 0x30
 let EQUAL = 0x3d
@@ -12,13 +12,18 @@ let UPPER_LOWER_DIFF = 0x20
 
 # https://www.rfc-editor.org/rfc/rfc4648#section-6
 let BASE32_ALPHAFET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-let BASE32_ALPHAFET_TO_BYTE =[-1, -1, 26, 27, 28, 29, 30, 31, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+let BASE32_ALPHAFET_TO_BYTE = [
+  -1, -1, 26, 27, 28, 29, 30, 31, -1, -1, -1, -1, -1, 0, -1, -1, -1, 0, 1, 2, 3,
+  4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+  25,
+]
 
 fn pub decode(string: String) -> Result[ByteArray, Error] {
   let buffer = ByteArray.new
 
   let output = ByteArray.filled(with: 0, times: (string.size * 5) / 8)
   let mut output_size = output.size
+
   output.clear
 
   let chunks = string.bytes.chunks(8)
@@ -42,9 +47,7 @@ fn pub decode(string: String) -> Result[ByteArray, Error] {
 
           output_size = ((string.size - padding_size) * 5) / 8
 
-          if output_size < 0 or chunks.next.some? {
-            throw Error.InvalidPadding
-          }
+          if output_size < 0 or chunks.next.some? { throw Error.InvalidPadding }
 
           break
         }
@@ -68,9 +71,13 @@ fn pub decode(string: String) -> Result[ByteArray, Error] {
     buffer.resize(size: 8, value: 0)
 
     output.push((buffer.get(0) << 3) | (buffer.get(1) >> 2))
-    output.push((buffer.get(1) << 6) | (buffer.get(2) << 1) | (buffer.get(3) >> 4))
+    output.push(
+      (buffer.get(1) << 6) | (buffer.get(2) << 1) | (buffer.get(3) >> 4),
+    )
     output.push((buffer.get(3) << 4) | (buffer.get(4) >> 1))
-    output.push((buffer.get(4) << 7) | (buffer.get(5) << 2) | (buffer.get(6) >> 3))
+    output.push(
+      (buffer.get(4) << 7) | (buffer.get(5) << 2) | (buffer.get(6) >> 3),
+    )
     output.push((buffer.get(6) << 5) | buffer.get(7))
 
     buffer.clear
@@ -85,7 +92,7 @@ fn expect_padding(characters: mut Peekable[Int]) -> Result[Int, Error] {
   let mut size = 0
 
   loop {
-    let character = match characters.next {
+    match characters.next {
       case Some(EQUAL) -> size = size + 1
       case Some(_) -> throw Error.InvalidPadding
       case _ -> break
@@ -114,7 +121,9 @@ class pub enum Error {
 impl Format for Error {
   fn pub fmt(formatter: mut Formatter) {
     match self {
-      case InvalidCharacter(character) -> formatter.tuple('InvalidCharacter').field(character).finish
+      case InvalidCharacter(character) -> {
+        formatter.tuple('InvalidCharacter').field(character).finish
+      }
       case InvalidPadding -> formatter.tuple('InvalidPadding').finish
     }
   }
@@ -123,7 +132,9 @@ impl Format for Error {
 impl ToString for Error {
   fn pub to_string -> String {
     match self {
-      case InvalidCharacter(character) -> "invalid character: 0x{character.format(IntFormat.Hex)}"
+      case InvalidCharacter(character) -> {
+        'invalid character: 0x${character.format(IntFormat.Hex)}'
+      }
       case InvalidPadding -> 'invalid padding'
     }
   }

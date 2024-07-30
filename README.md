@@ -6,7 +6,7 @@ This implementation is based on [RFC 6238](https://www.rfc-editor.org/rfc/rfc623
 
 ## Examples
 
-    import totp.Totp
+    import totp (Totp)
 
     let base32_encoded_secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
     let totp = Totp.with_secret(base32_encoded_secret)

@@ -1,8 +1,8 @@
 import std.env
-import std.stdio.(STDERR, STDOUT)
+import std.stdio (STDERR, STDOUT)
 import std.sys
 
-import totp.(Error, Totp)
+import totp (Error, Totp)
 
 class async Main {
   fn async main {
@@ -18,18 +18,18 @@ class async Main {
 fn run -> Result[Nil, Error] {
   match env.arguments.opt(0) {
     case Some('generate') or Some('g') -> {
-      let secret = env.arguments.opt(1).unwrap_or_else fn () {
+      let secret = env.arguments.opt(1).or_else fn () {
         exit('secret is required')
       }
       let totp = try Totp.with_secret(secret)
 
-      STDOUT.new.print("{totp.generate}")
+      STDOUT.new.print('${totp.generate}')
     }
     case Some('validate') or Some('v') -> {
-      let secret = env.arguments.opt(1).unwrap_or_else fn () {
+      let secret = env.arguments.opt(1).or_else fn () {
         exit('secret is required')
       }
-      let token = env.arguments.opt(2).unwrap_or_else fn () {
+      let token = env.arguments.opt(2).or_else fn () {
         exit('token is required')
       }
       let totp = try Totp.with_secret(secret)
@@ -46,7 +46,7 @@ fn run -> Result[Nil, Error] {
       STDOUT.new.print('usage: totp validate <secret> <token>')
     }
     case Some(command) -> {
-      exit("'{command}' is not a totp command. See `totp help`.")
+      exit("'${command}' is not a totp command. See `totp help`.")
     }
   }
 
@@ -54,6 +54,6 @@ fn run -> Result[Nil, Error] {
 }
 
 fn exit(message: String) -> Never {
-  STDERR.new.print("error: {message}")
+  STDERR.new.print('error: ${message}')
   sys.exit(1)
 }

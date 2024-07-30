@@ -1,10 +1,8 @@
+import hmac (Hmac)
 import std.endian.big
-import std.fmt.(Format, Formatter)
-import std.string.ToString
-import std.time.(DateTime, Duration)
-
-import hmac.Hmac
-
+import std.fmt (Format, Formatter)
+import std.string (ToString)
+import std.time (DateTime, Duration)
 import totp.base32
 
 let pub INTERVAL_SECS = 30
@@ -40,18 +38,23 @@ let pub WINDOW = 1
 class pub Totp {
   # The key used to generate tokens, decoded from a base32-encoded secret.
   let pub @key: ByteArray
+
   # The current time. Defaults to `Time.Now`.
   let pub @time: Time
+
   # The number of seconds each token is valid for. Defaults to 30.
   let pub @interval_secs: Int
+
   # The number of digits in each token. Defaults to 6.
   let pub @token_size: Int
+
   # The number of time-step windows to try validation before and after the current one. Defaults to 1.
   let pub @window: Int
 
   # Creates a new `Totp` instance with the given secret and the default parameters.
   fn pub static with_secret(secret: String) -> Result[Totp, Error] {
     let totp = new
+
     try totp.secret = secret
     Result.Ok(totp)
   }
@@ -59,23 +62,23 @@ class pub Totp {
   # Creates a new `Totp` instance with an empty secret and the default parameters.
   #
   # Made private to avoid accidentally creating an instance with an empty secret.
-  fn static new() -> Totp {
-    Totp {
-      @key = ByteArray.new,
-      @time = Time.Now,
-      @interval_secs = INTERVAL_SECS,
-      @token_size = TOKEN_SIZE,
-      @window = WINDOW,
-    }
+  fn static new -> Totp {
+    Totp(
+      key: ByteArray.new,
+      time: Time.Now,
+      interval_secs: INTERVAL_SECS,
+      token_size: TOKEN_SIZE,
+      window: WINDOW,
+    )
   }
 
   # Validates the given token.
   fn pub validate(token: String) -> Bool {
     let counter = timestamp_from_time / @interval_secs
 
-    (0 - @window).to(@window).iter.any? fn (offset) {
+    (0 - @window).to(@window).iter.any?(fn (offset) {
       token == generate_with_counter(counter + offset)
-    }
+    })
   }
 
   # Generates a new token.
@@ -85,6 +88,7 @@ class pub Totp {
 
   fn generate_with_counter(counter: Int) -> String {
     let counter_bytes = ByteArray.filled(with: 0, times: 8)
+
     big.write_i64(counter, into: counter_bytes, at: 0)
 
     let hmac = Hmac.sha1(@key, counter_bytes)
@@ -93,7 +97,10 @@ class pub Totp {
     let offset = hmac.get(19) & 0x0f
     let truncated = big.read_u32(hmac, offset)
     let code = truncated & 0x7fff_ffff
-    let token = (code % (10 ** @token_size)).to_string.pad_start('0', @token_size)
+    let token = (code % (10 ** @token_size)).to_string.pad_start(
+      '0',
+      @token_size,
+    )
 
     token
   }
@@ -103,7 +110,7 @@ class pub Totp {
   # If the secret is a valid base32-encoded string, returns `Result.Ok(nil)`.
   # Otherwise, returns `Result.Error(Error.InvalidSecret)`.
   fn pub mut secret=(string: String) -> Result[Nil, Error] {
-    @key = try base32.decode(string).map_error fn (_) { Error.InvalidSecret }
+    @key = try base32.decode(string).map_error(fn (_) { Error.InvalidSecret })
     Result.Ok(nil)
   }
 
